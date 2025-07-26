@@ -12,7 +12,6 @@ def setup_AI():
 
     global knn
     data = pandas.read_csv("pong.csv")
-    print(data.columns)
 
     x = data[["pong_x", "pong_y" ,"bot_x"]].values
     y = data[["quality"]].values
@@ -22,9 +21,7 @@ def setup_AI():
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=.2)
 
     knn.fit(x_train, y_train)
-    #prediction = knn.predict(x_test)
 
-    print("Test R^2 Score:", knn.score(x_test, y_test))
 
 tick = 1
 
