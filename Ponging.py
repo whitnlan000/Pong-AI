@@ -1,6 +1,7 @@
 import pygame
 
 import random
+import winsound
 
 from sklearn import neighbors, metrics
 from sklearn.model_selection import train_test_split
@@ -13,7 +14,7 @@ def setup_AI():
     global knn
     data = pandas.read_csv("pong.csv")
 
-    x = data[["pong_x", "pong_y" ,"bot_x"]].values
+    x = data[["dir","pong_x", "pong_y" ,"bot_x" , "win"]].values
     y = data[["quality"]].values
 
 
@@ -25,69 +26,113 @@ def setup_AI():
 
 tick = 1
 
+player_score = 0
+bot_score = 0
+
 setup_AI()
 
+y_dir = 0
+pygame.font.init()
 
-def ai(x1,x2,x3):
+score = pygame.font.SysFont("Arial",36)
+
+def ai(x1,x2,x3,win):
     global tick
-    if tick >= 60:
+    global y_dir
+    if tick >= 10:
         tick = 1
         setup_AI()
-        open("pong.csv", "a").write("\n" + str(pong.x) + "," + str(pong.y) + "," + str(bot.y) + "," + str(bot.y-pong.y))
+        open("pong.csv", "a").write("\n" + str(y_dir)+"," + str(pong.x) + "," + str(pong.y) + "," + str(bot.y) + "," + str(bot.y-pong.y) + "," + str(abs(pong.x - player.y) > 500))
 
-    return knn.predict([[x1,x2,x3]])
+    return knn.predict([[y_dir,x1,x2,x3,win]])
 
 pygame.init()
 
 screen = pygame.display.set_mode((1000,1000))
 
-player = pygame.rect.Rect(100,100,25,200)
-bot = pygame.rect.Rect(900,100,25,200)
-pong = pygame.rect.Rect(500,500,50,50)
+player = pygame.rect.Rect(100,500,5,200)
+bot = pygame.rect.Rect(900,500,5,200)
+pong = pygame.rect.Rect(500,500,25,25)
 
-x_dir = 1
+x_dir = 1.5
 y_dir = 0
+scoredisp = "0-0"
 
 while True:
-
+    print(x_dir)
     tick += 1
     pong.x += x_dir
     pong.y += y_dir
 
+    if x_dir > 23:
+        x_dir = 23
 
-    if pong.colliderect(bot) or pong.colliderect(player):
-        x_dir = -x_dir
-        y_dir = random.randint(-1,1)
+    if pong.colliderect(player):
+        winsound.PlaySound("1.mp3.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
 
-    if pong.y < 100 or pong.y > 900:
-        y_dir = random.randint(-1,1)
+        x_dir = abs(x_dir*1.02)
+        y_dir = random.randint(-3,3)
 
-    if pong.x < 0 or pong.x > 1000:
+    if pong.colliderect(bot):
+        winsound.PlaySound("3.mp3.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+
+        x_dir = -abs(x_dir*1.02)
+        y_dir = random.randint(-2,2)
+
+    if pong.y < 100:
+        y_dir = 2
+    if pong.y > 900:
+        y_dir = -2
+
+    if pong.x < 0:
         pong.x = 500
+        player_score += 1
+        print(str(player_score) + "-" + str(bot_score))
+    if pong.x > 1000:
+        pong.x = 500
+        bot_score += 1
+        print(str(player_score) + "-" + str(bot_score))
 
+    scoredisp = str(player_score) + "-" + str(bot_score)
 
     screen.fill("black")
+    screen.blit(score.render(scoredisp,False,"white"),(500,500))
+
 
     pygame.draw.rect(screen,(255,255,255),player)
     pygame.draw.rect(screen,(255,255,255),bot)
     pygame.draw.rect(screen,(255,255,255),pong)
 
-    if ai(pong.x,pong.y,bot.y) > 0:
-        bot.y -= 1
+    speedz = (abs(pong.x - player.y) > 500) + 3
+    #print(speedz)
+    if speedz == 0:
+        print("FREEZE!")
+    #print(abs(pong.x - player.y))
+    #print(speedz)
 
-    if ai(pong.x, pong.y, bot.y) < 0:
-        bot.y += 1
+    prediction = ai(pong.x, pong.y, bot.y, pong.x > 900)
 
-    if ai(pong.x,pong.y,player.y) > 0:
-        bot.y -= 1
+    if prediction > 0:
+        bot.y -= speedz
+    elif prediction < 0:
+        bot.y += speedz
 
-    if ai(pong.x, pong.y, player.y) < 0:
-        bot.y += 1
-
-    player.y = pong.y
+    if pong.y >= player.y:
+        player.y += 3
+    else:
+        player.y -= 3
+    #if pygame.key.get_pressed()[pygame.K_UP]:
+    #    player.y -= 2
+    #if pygame.key.get_pressed()[pygame.K_DOWN]:
+    #    player.y += 2
 
     pygame.display.flip()
 
     for event in pygame.event.get():
         if event == pygame.QUIT:
             pygame.quit()
+        if event == pygame.K_UP:
+            player.y += 2
+
+        if event == pygame.K_DOWN:
+            player.y -= 2
