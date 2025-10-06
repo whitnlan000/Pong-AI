@@ -89,10 +89,13 @@ while True:
     if pong.x < 0:
         pong.x = 500
         pong.y = player.y
+        y_dir = 0
         player_score += 1
         print(str(player_score) + "-" + str(bot_score))
     if pong.x > 1000:
         pong.x = 500
+        y_dir = 0
+
         pong.y = bot.y
         bot_score += 1
         print(str(player_score) + "-" + str(bot_score))
